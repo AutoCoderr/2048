@@ -1,0 +1,54 @@
+th, td, span {
+    border: 1px solid black;
+  }
+  td {
+      width: 200px;
+      height: 200px;
+      text-align: center;
+      vertical-align: middle;
+      font-size: 50%;
+  }
+  #reload {
+      position: absolute;
+      left: 57%;
+      top: 30%;
+  }
+#displayForIa {
+  position: absolute;
+  left: 0%;
+  top: 35%;
+}
+span {
+  border: 0px #fff;
+}
+body{
+    background-color: blueviolet;
+    color:white;
+}
+.wordart {
+    font-family: Arial, sans-serif;
+    font-size: 4em;
+    font-weight: bold;
+    position: relative;
+    z-index: 1;
+    display: inline-block;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  .wordart.radial .text {
+      background: #fffa28;
+      background: url(data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/Pgo8c3ZnIHhtbG5zPSJod…BoZWlnaHQ9IjEwMSIgZmlsbD0idXJsKCNncmFkLXVjZ2ctZ2VuZXJhdGVkKSIgLz4KPC9zdmc+);
+      background: -moz-radial-gradient(center, ellipse cover, #fffa28 0%, #ec8a39 100%);
+      background: -webkit-gradient(radial, center center, 0px, center center, 100%, color-stop(0%, #fffa28), color-stop(100%, #ec8a39));
+      background: -webkit-radial-gradient(center, ellipse cover, #fffa28 0%, #ec8a39 100%);
+      background: -o-radial-gradient(center, ellipse cover, #fffa28 0%, #ec8a39 100%);
+      background: -ms-radial-gradient(center, ellipse cover, #fffa28 0%, #ec8a39 100%);
+      background: radial-gradient(ellipse at center, #fffa28 0%, #ec8a39 100%);
+      background-clip: text;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#fffa28', endColorstr='#ec8a39', GradientType=1);
+      font-family: Impact, sans-serif;
+      font-weight: bold;
+  }

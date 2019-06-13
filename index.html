@@ -1,0 +1,620 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<link rel="SHORTCUT ICON" href="2048.png">
+
+<title>2048</title>
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.1/css/all.css" integrity="sha384-50oBUHEmvpQ+1lW4y57PTFmhCaXp0ML5d60M1M7uH2+nqUivzIebhndOJK28anvf" crossorigin="anonymous">
+<link rel="stylesheet" type="text/css" href="2048.css">
+
+<div id="displayForIa">
+	<select id='selectMode' onchange="modeSelected()">
+		<option value='training'>Entrainer</option>
+		<option value='test'>Tester</option>
+		<option value='genBatch'>Génerer les données t'entrainement</option>
+	</select>
+	<div id="buttonForIa"></div>
+	<div id="msgForIa"></div>
+</div>
+<center>
+<div class="wordart radial"><span class="text">2048</span></div>
+<br/>
+<button type="button" class="btn btn-primary" onclick="resolvIA(100,4)">Résolution</button>
+<button type="button" class="btn btn-primary" onclick="back()"><=</button>
+<button type="button" class="btn btn-lg btn-primary" onclick="reload()"><i class="fas fa-redo-alt"></i></button>
+<div id="score"></div>
+<div id="msg"></div>
+<div id="2048"></div>
+</center>
+
+<span id="empty-0" style="display: none; position: absolute;"></span>
+<span id="empty-1" style="display: none; position: absolute;"></span>
+<span id="empty-2" style="display: none; position: absolute;"></span>
+<span id="empty-3" style="display: none; position: absolute;"></span>
+<span id="empty-4" style="display: none; position: absolute;"></span>
+<span id="empty-5" style="display: none; position: absolute;"></span>
+<span id="empty-6" style="display: none; position: absolute;"></span>
+<span id="empty-7" style="display: none; position: absolute;"></span>
+<span id="empty-8" style="display: none; position: absolute;"></span>
+<span id="empty-9" style="display: none; position: absolute;"></span>
+<span id="empty-10" style="display: none; position: absolute;"></span>
+<span id="empty-11" style="display: none; position: absolute;"></span>
+
+
+<script src="jquery.min.js"></script>
+<script src="tf.min.js"></script>
+<script src="DL.js"></script>
+<script>
+
+let mode = "training";
+
+let dl = new DL();
+dl.createNN();
+document.getElementById("buttonForIa").innerHTML = "<input type='button' value='entrainer' onclick='dl.trainNN()'/>";
+function modeSelected() {
+	$("#selectMode").blur();
+	switch(document.getElementById("selectMode").value) {
+		case "training":
+			document.getElementById("buttonForIa").innerHTML = "<input type='button' value='entrainer' onclick='dl.trainNN()'/>";
+			mode = "training";
+			break;
+		case "test":
+			document.getElementById("buttonForIa").innerHTML = "<input type='button' value='tester' onclick='dl.testNN()'/><br/>"+
+															   "<input type='text' id='nbSimulteTxt' placeholder='Nombre de simulations'/>"+
+															   "<input type='button' value='Simuler' onclick='dl.simule(parseInt(document.getElementById(`nbSimulteTxt`).value))'/>";
+			mode = "test";
+			break;
+		case "genBatch":
+			//document.getElementById("buttonForIa").innerHTML = "<input type='button' value='exporter batch x et y' onclick='dl.exportBatch()'/>";
+			document.getElementById("buttonForIa").innerHTML = "<br/>Utilisateur qui a fait ce batch : <select id='userBatch'>"+
+															   "<option value='jacques'>Jacques</option>"+
+															   "<option value='eric'>Eric</option>"+
+															   "<option value='julien'>Julien</option>"+
+															   "</select><br/>"+
+															   "<input type='button' value='envoyer les données' onclick='dl.sendBatch()'/>";
+			mode = "genBatch";
+			break;
+	}
+}
+
+
+
+
+let oldTab = [];
+let score = 0;
+const largeurTableau = 4;
+const hauteurTableau = 4;
+let tab = genMatrice(largeurTableau,hauteurTableau);
+tab[Math.round(Math.random()*(hauteurTableau-1))][Math.round(Math.random()*(largeurTableau-1))] = (Math.round(Math.random()*9) == 0 ? 4 : 2);
+let lRandom = Math.round(Math.random()*(hauteurTableau-1));
+let Crandom = Math.round(Math.random()*(largeurTableau-1));
+while (tab[lRandom][Crandom] != 0) {
+	lRandom = Math.round(Math.random()*(hauteurTableau-1));
+	Crandom = Math.round(Math.random()*(largeurTableau-1));
+}
+tab[lRandom][Crandom] = (Math.round(Math.random()*9) == 0 ? 4 : 2);
+const moves = ["toUp","toDown","toLeft","toRight"];
+
+let moveds = [];
+let oneMoved;
+let speedAnime = 100;
+let stop = false;
+let s2048 = false;
+const sizeTD = 120;
+displayG();
+
+function move(sens,tabb = tab, scoreb = score, oldTabb = oldTab) {
+	if (sens == "toUp" | sens == "toDown" | sens == "toLeft" | sens == "toRight") {
+		if (mode == "genBatch") {
+			dl.batch_x.push(game2Vector(tabb));
+			dl.batch_y.push(mouv2Vector(sens));
+		}
+		oldTabb.push({tab: copyTab(tabb), score: scoreb});
+	}
+	//console.log("move "+sens);
+	moveds = [];
+	switch(sens) {
+		case "toUp":
+			oneMoved = false;
+			//console.log("before for ; case 1");
+			for (let l=0;l<tab.length;l++) {
+				for (let c=0;c<tab[l].length;c++) {
+					if (tabb[l][c] != 0) {
+						let lb = l;
+						while (lb>0) {
+							if (tabb[lb-1][c] != 0) {
+								break;
+							}
+							lb -= 1;
+						}
+						if (l != lb) {
+							tabb[lb][c] = tabb[l][c];
+							tabb[l][c] = 0;
+							oneMoved = true;
+							moveds.push({from: {l: l, c: c}, to: {l: lb, c: c}, fusion: false});
+						}
+						if (lb>0) {
+							if (tabb[lb-1][c] == tabb[lb][c] & !alreadyFusionned(lb-1,c)) {
+								oneMoved = true;
+								tabb[lb-1][c] = tabb[lb-1][c]*2;
+								scoreb += tabb[lb-1][c];
+								tabb[lb][c] = 0;
+								if (l == lb) {
+									moveds.push({from: {l: l, c: c}, to: {l: lb-1, c: c}, fusion: true});
+								} else {
+									moveds[moveds.length-1].fusion = true;
+									moveds[moveds.length-1].to.l = lb-1;
+								}
+							}
+						}
+					}
+				}
+			}
+			//console.log("after for ; case 1");
+			if (oneMoved & thereAreEmpty()) {
+				let lRandom = Math.round(Math.random()*(hauteurTableau-1));
+				let Crandom = Math.round(Math.random()*(largeurTableau-1));
+				while (tabb[lRandom][Crandom] != 0) {
+					lRandom = Math.round(Math.random()*(hauteurTableau-1));
+					Crandom = Math.round(Math.random()*(largeurTableau-1));
+				}
+				tabb[lRandom][Crandom] = (Math.round(Math.random()*9) == 0 ? 4 : 2);
+			}
+			break;
+		case "toDown":
+			oneMoved = false;
+			//console.log("before for ; case 2");
+			for (let l=tab.length-1;l>=0;l--) {
+				for (let c=tab[l].length-1;c>=0;c--) {
+					if (tabb[l][c] != 0) {
+						let lb = l;
+						while (lb<hauteurTableau-1) {
+							if (tabb[lb+1][c] != 0) {
+								break;
+							}
+							lb += 1;
+						}
+						if (l != lb) {
+							tabb[lb][c] = tabb[l][c];
+							tabb[l][c] = 0;
+							oneMoved = true;
+							moveds.push({from: {l: l, c: c}, to: {l: lb, c: c}, fusion: false});
+						}
+						if (lb<hauteurTableau-1) {
+							if (tabb[lb+1][c] == tabb[lb][c] & !alreadyFusionned(lb+1,c)) {
+								oneMoved = true;
+								tabb[lb+1][c] = tabb[lb+1][c]*2;
+								scoreb += tabb[lb+1][c];
+								tabb[lb][c] = 0;
+								if (l == lb) {
+									moveds.push({from: {l: l, c: c}, to: {l: lb+1, c: c}, fusion: true});
+								} else {
+									moveds[moveds.length-1].fusion = true;
+									moveds[moveds.length-1].to.l = lb+1;
+								}
+							}
+						}
+					}
+				}
+			}
+			//console.log("after for ; case 2");
+			if (oneMoved & thereAreEmpty()) {
+				let lRandom = Math.round(Math.random()*(hauteurTableau-1));
+				let Crandom = Math.round(Math.random()*(largeurTableau-1));
+				while (tab[lRandom][Crandom] != 0) {
+					lRandom = Math.round(Math.random()*(hauteurTableau-1));
+					Crandom = Math.round(Math.random()*(largeurTableau-1));
+				}
+				tabb[lRandom][Crandom] = (Math.round(Math.random()*9) == 0 ? 4 : 2);
+			}
+			break;
+		case "toLeft":
+			oneMoved = false;
+			//console.log("before for ; case 3");
+			for (let c=0;c<largeurTableau;c++) {
+				for (let l=0;l<hauteurTableau;l++) {
+					if (tabb[l][c] != 0) {
+						let cb = c;
+						while (cb>0) {
+							if (tabb[l][cb-1] != 0) {
+								break;
+							}
+							cb -= 1;
+						}
+						if (c != cb) {
+							tabb[l][cb] = tabb[l][c];
+							tabb[l][c] = 0;
+							oneMoved = true;
+							moveds.push({from: {l: l, c: c}, to: {l: l, c: cb}, fusion: false});
+						}
+						if (cb>0) {
+							if (tabb[l][cb-1] == tabb[l][cb] & !alreadyFusionned(l,cb-1)) {
+								oneMoved = true;
+								tabb[l][cb-1] = tabb[l][cb-1]*2;
+								scoreb += tabb[l][cb-1];
+								tabb[l][cb] = 0;
+								if (c == cb) {
+									moveds.push({from: {l: l, c: c}, to: {l: l, c: cb-1}, fusion: true});
+								} else {
+									moveds[moveds.length-1].fusion = true;
+									moveds[moveds.length-1].to.c = cb-1;
+								}
+							}
+						}
+					}
+				}
+			}
+			//console.log("after for ; case 3");
+			if (oneMoved & thereAreEmpty()) {
+				let lRandom = Math.round(Math.random()*(hauteurTableau-1));
+				let Crandom = Math.round(Math.random()*(largeurTableau-1));
+				while (tab[lRandom][Crandom] != 0) {
+					lRandom = Math.round(Math.random()*(hauteurTableau-1));
+					Crandom = Math.round(Math.random()*(largeurTableau-1));
+				}
+				tabb[lRandom][Crandom] = (Math.round(Math.random()*9) == 0 ? 4 : 2);
+			}
+			break;
+		case "toRight":
+			oneMoved = false;
+			//console.log("before for ; case 4");
+			for (let c=largeurTableau-1;c>=0;c--) {
+				for (let l=0;l<hauteurTableau;l++) {
+					if (tabb[l][c] != 0) {
+						let cb = c;
+						while (cb<largeurTableau-1) {
+							if (tabb[l][cb+1] != 0) {
+								break;
+							}
+							cb += 1;
+						}
+						if (c != cb) {
+							tabb[l][cb] = tabb[l][c];
+							tabb[l][c] = 0;
+							oneMoved = true;
+							moveds.push({from: {l: l, c: c}, to: {l: l, c: cb}, fusion: false});
+						}
+						if (cb<largeurTableau-1) {
+							if (tabb[l][cb+1] == tabb[l][cb] & !alreadyFusionned(l,cb+1)) {
+								oneMoved = true;
+								tabb[l][cb+1] = tabb[l][cb+1]*2;
+								scoreb += tabb[l][cb+1];
+								tabb[l][cb] = 0;
+								if (c == cb) {
+									moveds.push({from: {l: l, c: c}, to: {l: l, c: cb+1}, fusion: true});
+								} else {
+									moveds[moveds.length-1].fusion = true;
+									moveds[moveds.length-1].to.c = cb+1;
+								}
+							}
+						}
+					}
+				}
+			}
+			//console.log("after for ; case 4");
+			if (oneMoved & thereAreEmpty()) {
+				let lRandom = Math.round(Math.random()*(hauteurTableau-1));
+				let Crandom = Math.round(Math.random()*(largeurTableau-1));
+				while (tab[lRandom][Crandom] != 0) {
+					lRandom = Math.round(Math.random()*(hauteurTableau-1));
+					Crandom = Math.round(Math.random()*(largeurTableau-1));
+				}
+				tabb[lRandom][Crandom] = (Math.round(Math.random()*9) == 0 ? 4 : 2);
+			}
+			break;
+	}
+	return {tab: tabb, score: scoreb};
+}
+
+const seuilMoveTouch = 200;
+let startX;
+let startY;
+
+$(document).bind('touchstart', function (e){
+   startX = e.originalEvent.touches[0].clientX;
+   startY = e.originalEvent.touches[0].clientY;
+});
+
+$(document).bind('touchend', function (e){
+   const endX = e.originalEvent.changedTouches[0].clientX;
+   const endY = e.originalEvent.changedTouches[0].clientY;
+   if (endX-startX > seuilMoveTouch & (0-seuilMoveTouch < endY-startY & endY-startY < seuilMoveTouch)) {
+   		score = move("toRight").score;
+		displayG();
+   } else if (endX-startX < 0-seuilMoveTouch & (0-seuilMoveTouch < endY-startY & endY-startY < seuilMoveTouch)) {
+   		score = move("toLeft").score;
+		displayG();
+   } else if (endY-startY > seuilMoveTouch & (0-seuilMoveTouch < endX-startX & endX-startX < seuilMoveTouch)) {
+   		score = move("toDown").score;
+		displayG();
+   } else if (endY-startY < 0-seuilMoveTouch & (0-seuilMoveTouch < endX-startX & endX-startX < seuilMoveTouch)) {
+   		score = move("toUp").score;
+		displayG();
+   }
+
+});
+
+
+document.onkeydown = function () {
+	if (isGameOver()) {
+		return;
+	}
+	switch (event.keyCode) {
+		case 38:
+		    score = move("toUp").score;
+		    displayG();
+		    break;
+		case 40:
+		    score = move("toDown").score;
+		    displayG();
+		    break;
+		case 37:
+		    score = move("toLeft").score;
+		    displayG();
+		    break;
+		case 39:
+			score = move("toRight").score;
+		    displayG();
+		    break;
+	}
+}
+
+function display() {
+	let str = "";
+	for (let l=0;l<tab.length;l++) {
+		for (let c=0;c<tab[l].length;c++) {
+			str += tab[l][c];
+			if (c<tab[l].length-1) {
+				str += " | ";
+			}
+		}
+		str += "\n";
+	}
+	console.log(str);
+}
+
+function displayG(callback) {
+	let nbEmpty = 0;
+	for (let i=0;i<moveds.length;i++) {
+		$("#empty-"+nbEmpty).css("background-color", "rgb(205,193,180)");
+		$("#empty-"+nbEmpty).css("width", sizeTD+"px");
+		$("#empty-"+nbEmpty).css("height", sizeTD+"px");
+		$("#empty-"+nbEmpty).css("top", $("#"+moveds[i].from.l+"-"+moveds[i].from.c).position().top);
+		$("#empty-"+nbEmpty).css("left", $("#"+moveds[i].from.l+"-"+moveds[i].from.c).position().left);
+		$("#empty-"+nbEmpty).css("display", "");
+		$("#"+moveds[i].from.l+"-"+moveds[i].from.c).css("z-index", "1");
+		if (moveds[i].from.l > moveds[i].to.l) {
+			$("#"+moveds[i].from.l+"-"+moveds[i].from.c).animate({
+				'margin-top': "-"+(sizeTD*(moveds[i].from.l-moveds[i].to.l))+"px",
+  			},speedAnime);
+		} else if (moveds[i].to.l > moveds[i].from.l) {
+			$("#"+moveds[i].from.l+"-"+moveds[i].from.c).animate({
+				'margin-top': (sizeTD*(moveds[i].to.l-moveds[i].from.l))+"px"
+  			},speedAnime);
+  		} else if (moveds[i].from.c > moveds[i].to.c) {
+			$("#"+moveds[i].from.l+"-"+moveds[i].from.c).animate({
+				'margin-left': "-"+(sizeTD*(moveds[i].from.c-moveds[i].to.c))+"px"
+  			},speedAnime);
+  		} else if (moveds[i].to.c > moveds[i].from.c) {
+			$("#"+moveds[i].from.l+"-"+moveds[i].from.c).animate({
+				'margin-left': (sizeTD*(moveds[i].to.c-moveds[i].from.c))+"px"
+  			},speedAnime);
+  		}
+  		nbEmpty += 1;
+	}
+	if (stop) {
+		return;
+	}
+	setTimeout(() => {
+		for (let i=0;i<12;i++) {
+			$("#empty-"+i).css("display", "none");
+		}
+		const startCoor = {w: screen.width*((screen.width/(sizeTD*4))/10), h: screen.height*0.22}
+		let str = "<table>";
+		for (let l=0;l<tab.length;l++) {
+			str += "<tr>";
+			for (let c=0;c<tab[l].length;c++) {
+				if (tab[l][c] == 2048 & !s2048) {
+					document.getElementById("msg").innerHTML = "<font color='green'>2048 ATTEIND!</font>";
+					s2048 = true;
+				}
+				str += "<td id='"+l+"-"+c+"' style='";
+				switch(tab[l][c]) {
+					case 0:
+						str += "background-color: rgb(205,193,180);";
+						break;
+					case 2:
+						str += "background-color: rgb(238,228,218); ";
+						str += "color: black;";
+						break;
+					case 4:
+						str += "background-color: rgb(237,224,200); ";
+						str += "color: black;";
+						break;
+					case 8:
+						str += "background-color: rgb(242,177,121); ";
+						str += "color: white;";
+						break;
+					case 16:
+						str += "background-color: rgb(245,149,99); ";
+						str += "color: white;";
+						break;
+					case 32:
+						str += "background-color: rgb(246,124,95); ";
+						str += "color: white;";
+						break;
+					case 64:
+						str += "background-color: rgb(246,94,59); ";
+						str += "color: white;";
+						break;
+					case 128:
+						str += "background-color: rgb(237,207,114); ";
+						str += "color: white;";
+						break;
+					case 256:
+						str += "background-color: rgb(237,204,97); ";
+						str += "color: white;";
+						break;
+					case 512:
+						str += "background-color: rgb(237,200,80); ";
+						str += "color: white;";
+						break;
+					case 1024:
+						str += "background-color: rgb(237,197,63); ";
+						str += "color: white;";
+						break;
+					case 2048:
+						str += "background-color: rgb(237,194,46); ";
+						str += "color: white;";
+						break;
+					case 4096:
+						str += "background-color: rgb(61,59,50); ";
+						str += "color: white;";
+						break;
+				}
+				if (tab[l][c] > 4096) {
+					str += "background-color: rgb(61,59,50); ";
+					str += "color: white;";
+				}
+				str += " width: "+sizeTD+"px; height: "+sizeTD+"px; font-size: 40px; position: absolute; left: "+(startCoor.w+sizeTD*c)+"px; top: "+(startCoor.h+sizeTD*l)+"px;";
+				str += " font-size: "+(sizeTD/(1.7+(tab[l][c].toString().length < 4 ? 0 : (0.6*(tab[l][c].toString().length-3)))))+"px'>";
+				if (tab[l][c] >= 1024) {
+					str += "<span style='position: absolute; margin-top: "+(sizeTD/5)+"px; margin-left: -"+(sizeTD/2)+"'>";
+				}
+				str += (tab[l][c] != 0 ? tab[l][c] : "")+(tab[l][c] >= 1024 ? "<span>" : "")+"</td>";
+			}
+			str += "</tr>";
+		}
+		document.getElementById("score").innerHTML = "score = "+score;
+		document.getElementById("2048").innerHTML = str;
+		if (isGameOver()) {
+			document.getElementById("msg").innerHTML = "<font color='red' size='4'>GAME OVER</font>";
+		} else if (typeof(callback) == "function") {
+			callback();
+		}
+	},speedAnime);
+}
+
+function alreadyFusionned(l,c) {
+	for (let i=0;i<moveds.length;i++) {
+		if (moveds[i].to.l == l & moveds[i].to.c == c & moveds[i].fusion) {
+			return true;
+		}
+	}
+	return false;
+}
+
+function thereAreEmpty() {
+	for (let l=0;l<hauteurTableau;l++) {
+		for (let c=0;c<largeurTableau;c++) {
+			if (tab[l][c] == 0) {
+				return true;
+			}
+		}
+	}
+	return false
+}
+
+function isGameOver() {
+	if (thereAreEmpty()) {
+		return false;
+	}
+	for (let l=0;l<hauteurTableau;l++) {
+		for (let c=0;c<largeurTableau;c++) {
+			if (l < hauteurTableau-1) {
+				if (tab[l][c] == tab[l+1][c]) {
+					return false;
+				}
+			}
+			if (c < largeurTableau-1) {
+				if (tab[l][c] == tab[l][c+1]) {
+					return false;
+				}
+			}
+		}
+	}
+	return true;
+}
+
+function yolo() {
+	const actions = ["toUp","toDown","toLeft","toRight"];
+	if (!isGameOver()) {
+		setTimeout(() => {
+			const moveVars = move(actions[Math.round(Math.random()*3)]);
+			score = moveVars.score;
+			displayG();
+			yolo();
+		}, 1);
+	} else {
+		document.getElementById("msg").innerHTML = "<font color='red' size='8'>GAME OVER</font>";
+	}
+}
+/*
+for (let l=0;l<4;l++) {
+	for (let c=0;c<4;c++) {
+		tab[l][c] = 0;
+	}
+}
+
+tab[3][0] = 16;
+tab[3][1] = 4;
+tab[3][2] = 4;
+displayG();
+
+*/
+
+function back(oldTabb = oldTab, tabb = tab, scoreb = score, display = true) {
+	old = oldTab[oldTab.length-1];
+	tabb = old.tab;
+	scoreb = old.score;
+	oldTabb = oldTab.slice(0,oldTab.length-1);
+	moveds = [];
+	if (display) {
+		tab = tabb;
+		score = scoreb;
+		oldTab = oldTabb;
+		document.getElementById("msg").innerHTML = "";
+		if (mode == "genBatch") {
+			dl.batch_x = dl.batch_x.slice(0,dl.batch_x.length-1);
+			dl.batch_y = dl.batch_y.slice(0,dl.batch_y.length-1);
+		}
+		displayG();
+	} else {
+		return {tab: tabb, score: scoreb, oldTab: oldTabb};
+	}
+}
+
+function reload() {
+	tab = genMatrice(largeurTableau,hauteurTableau);
+	tab[Math.round(Math.random()*(hauteurTableau-1))][Math.round(Math.random()*(largeurTableau-1))] = (Math.round(Math.random()*9) == 0 ? 4 : 2);
+	let lRandom = Math.round(Math.random()*(hauteurTableau-1));
+	let Crandom = Math.round(Math.random()*(largeurTableau-1));
+	while (tab[lRandom][Crandom] != 0) {
+		lRandom = Math.round(Math.random()*(hauteurTableau-1));
+		Crandom = Math.round(Math.random()*(largeurTableau-1));
+	}
+	tab[lRandom][Crandom] = (Math.round(Math.random()*9) == 0 ? 4 : 2);
+	moveds = [];
+	oldTab = [];
+	dl.batch_x = [];
+	dl.batch_y = [];
+	score = 0;
+	displayG();
+	document.getElementById("msg").innerHTML = "";
+}
+
+function genMatrice(w,h) {
+	let mat = [];
+	for (let l=0;l<h;l++) {
+		mat.push([]);
+		for (let c=0;c<w;c++) {
+			mat[l].push(0);
+		}
+	}
+	return mat;
+}
+
+</script>
+<script src="ia2.js"></script>
+<script src="resolv.js"></script>
+<script src="resolv.old.js"></script>

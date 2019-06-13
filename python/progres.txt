@@ -1,0 +1,13 @@
+46.05% loss => 15000 epoch decay 0.003 to 0.0001 sans dropout batch_size 1/10 batch
+36.45% ; 38.44% loss => 2000 epoch decay 0.003 to 0.0001 sans dropout batch_size 100
+35.45% loss => 3000 epoch decay 0.003 to 0.0001 sans dropout batch_size 100
+34.09% loss => 10000 epoch decay 0.003 to 0.0001 sans dropout batch_size 100
+
+ajout d'1 partie
+
+34.15% loss => 10000 epoch decay 0.003 to 0.0001 sans dropout batch_size 100
+
+ajout de 2 parties
+
+
+38.5% loss => 1000 epoch decay 0.003 to 0.0001 sans dropout batch_size 100
